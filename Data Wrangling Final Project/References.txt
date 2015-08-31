@@ -1,0 +1,10 @@
+References:
+
+https://docs.python.org/2/library/re.html
+http://docs.mongodb.org/manual/reference/method/db.createCollection/
+http://docs.mongodb.org/manual/core/aggregation-pipeline/
+http://docs.mongodb.org/manual/core/indexes-introduction/
+https://wiki.openstreetmap.org/wiki/Map_Features
+http://wiki.openstreetmap.org/wiki/Node
+http://ngmdb.usgs.gov/ngmdb/ngmdb_home.html
+Udacity Discussion Forum

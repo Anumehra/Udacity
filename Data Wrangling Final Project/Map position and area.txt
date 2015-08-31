@@ -1,0 +1,3 @@
+Link to the map position - https://s3.amazonaws.com/metro-extracts.mapzen.com/san-francisco_california.osm.bz2
+Short Description - It contains data for San Francisco city and other cities around San Francisco 
+Reason for choice: I work in San Francisco, and live in Bay Area. I chose this area as I can relate to it. 
