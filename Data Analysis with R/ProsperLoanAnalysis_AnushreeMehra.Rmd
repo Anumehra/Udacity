@@ -1,0 +1,324 @@
+Prosper Loan Analysis by Anushree Mehra
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(alr3)
+library(reshape2)
+library(GGally)
+library(scales)
+library(RColorBrewer)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loandata <- read.table('/Users/anushreemehra/Documents/workspace/Udacity/Data Analysis with R/prosperLoanData.csv', sep=",", header = TRUE)
+```
+
+# Univariate Plots Section
+```{r echo=FALSE, Univariate_Plots}
+# Understand the structure of dataset
+str(loandata)
+summary(loandata)
+
+# Explore few key variables 
+summary(loandata$BorrowerAPR)
+summary(loandata$BorrowerRate)
+summary(loandata$LenderYield)
+summary(loandata$ProsperRating..Alpha.)
+summary(loandata$EstimatedLoss)
+
+# Change the column names to avoid spceial characters not recognized by R
+colnames(loandata)[colnames(loandata)=="ProsperRating..numeric."] <- "ProsperRating_numeric"
+colnames(loandata)[colnames(loandata)=="ProsperRating..Alpha."] <- "ProsperRating_alpha"
+colnames(loandata)[colnames(loandata)=="ListingCategory..numeric."] <- "ListingCategory_numeric"
+colnames(loandata)[colnames(loandata)=="TradesNeverDelinquent..percentage."] <- "TradesNeverDelinquent_percentage"
+
+# Subset the data to include the records from July 2009, start of the prosper rating process.
+loandata_2009 <- subset(loandata, !is.na(ProsperRating_numeric))
+
+# Add a new variable for mean credit score
+loandata_2009$MeanCreditScore <- (loandata_2009$CreditScoreRangeLower + loandata_2009$CreditScoreRangeUpper)/2
+
+# Explore few of the key variable for the new dataset
+summary(loandata_2009$LenderYield)
+summary(loandata_2009$ProsperRating_alpha)
+summary(loandata_2009$MeanCreditScore)
+summary(loandata_2009$EstimatedLoss)
+
+# Distribution for Borrower Rate
+ggplot(aes(x = BorrowerRate), data = loandata_2009) +
+  geom_histogram(binwidth = 0.01)  +
+  scale_x_continuous(breaks = seq(0, 0.4, 0.05))
+
+# Distribution for ProsperRating
+ggplot(aes(x = ProsperRating_alpha), data = loandata_2009) +
+  geom_histogram(fill = 'blue') 
+
+## Reorder ProsperRating_alpha 
+loandata_2009$ProsperRating_alpha <- factor(loandata_2009$ProsperRating_alpha, levels = c("AA", "A", "B", "C", "D", "E", "HR"), ordered = TRUE)
+
+# Frequency plot for total number of loans by quarter-year.
+ggplot(aes(x = LoanOriginationQuarter), data = loandata_2009) + 
+  geom_freqpoly(aes(group = 1)) +
+  scale_y_continuous(breaks = seq(0, 15000, 1000)) +
+  theme(text = element_text(size=10),
+        axis.text.x = element_text(angle=90, vjust=1))
+
+## Reorder LoanOriginationQuarter
+loandata_2009$LoanOriginationQuarter <- factor(loandata_2009$LoanOriginationQuarter, levels = c("Q3 2009", "Q4 2009", "Q1 2010", "Q2 2010", "Q3 2010", "Q4 2010", "Q1 2011", "Q2 2011", "Q3 2011", "Q4 2011", "Q1 2012", "Q2 2012", "Q3 2012", "Q4 2012", "Q1 2013", "Q2 2013", "Q3 2013", "Q4 2013", "Q1 2014"), ordered = TRUE)
+
+# Distribution for BorrowerState
+ggplot(aes(x = BorrowerState), data = loandata_2009) +
+  geom_histogram() + 
+  theme(text = element_text(size=10),
+        axis.text.x = element_text(angle=90, vjust=1))
+
+## Groupby BorrowerState
+loandata_2009_state_group <- group_by(loandata_2009, BorrowerState)
+
+## Get the count by BorrowerState
+loandata_2009_by_state <- summarise(loandata_2009_state_group,
+                          n = n())
+
+## Get the states with greater than or equal to 3rd quartile of total loans
+state_count_top25 <- subset(loandata_2009_by_state, n >= quantile(n, 0.75))
+
+## View the top states, along with number of loans
+state_count_top25
+```
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+Prosper is America's first peer-to-peer lending marketplace, founded in 2005. Borrower can request personal loans, and propser verifies the borrower's identity and other related information before granting the loan. Prosper handles the servicing of the loan, collects borrower payments, and distributes interest back to the loan investors.
+
+Prosper dataset has 81 variables. It contains the data since 2006 to early 2014, that constitute of 113937 observations. 
+
+### What is/are the main feature(s) of interest in your dataset?
+The main features are Prosper Rating, Estimated Loss Rate, Borrower Rate, and Lender Yield. From 2006 to 2009, Prosper had a variable rate model. From July 2009, Prosper started assigning Prosper Rating to prospective borrowers. According to the company, Prosper Rating is calculated based on borrower's estimated loss rate. 
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+Few other features that will be helpful to support the investigation are Income Range, Employment Status, Loan Status, Credit Score, EstimatedReturn, Estimated Effective Yield, Investors, etc. 
+
+### Did you create any new variables from existing variables in the dataset?
+I modified the dataset to only include the records with Prosper Rating, i.e. since July 2009. I also added a new variable MeanCreditScore, calculated from CreditScoreLowerRange and CreditScoreUpperRange, so that I can use it for comparisons and investigation. 
+
+### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+- Distribution for BorrowerRate was mostly normal, except a peak around 0.31
+- Distribution for ProsperRating was normal. 
+- The frequency plot for total number of loans depicts that prosper loans are becoming popular with time. There is a steep rise from Q1 2013 to Q4 2013. 
+- I reordered the ProsperRating and LoanOriginationQuarter factors, to display them in the sequential order in the charts. 
+- I also used the group by and summarise function to find the states with the highest number of loans.
+
+
+# Bivariate Plots Section
+```{r echo=FALSE, Bivariate_Plots}
+
+# Relationship between EstimatedLoss and ProsperRating
+
+## Scatterplot for EstimatedLoss vs ProsperRating. Omit the top 1%
+ggplot(aes(x = ProsperRating_alpha, y = EstimatedLoss), data = loandata_2009) +
+  geom_point() +
+  scale_y_continuous(lim = c(0, quantile(loandata_2009$EstimatedLoss, 0.99)))
+
+## Find the correlation using Pearson's method
+with(loandata_2009, cor.test(ProsperRating_numeric, EstimatedLoss))
+
+## Use box plots to explore the min, max and median value of EstimatedLoss for each ProsperRating. Omit the top 1%
+ggplot(aes(x = ProsperRating_alpha, y = EstimatedLoss), data = loandata_2009) +
+  geom_boxplot() +
+  scale_y_continuous(lim = c(0, quantile(loandata_2009$EstimatedLoss, 0.99)))
+
+## Get the statistics for EstimatedLoss by ProsperRating
+by(loandata_2009$EstimatedLoss, loandata_2009$ProsperRating_alpha, summary)
+
+# Scatterplot for MeanCreditScore vs ProsperRating. 
+ggplot(aes(x = ProsperRating_alpha, y = MeanCreditScore), data = loandata_2009) +
+  geom_point(alpha = 0.01)
+
+## Calculate correlation
+with(loandata_2009, cor.test(ProsperRating_numeric, MeanCreditScore))
+
+## Get the numerical statistics
+by(loandata_2009$MeanCreditScore, loandata_2009$ProsperRating_alpha, summary)
+
+# Scatterplot for Investors vs LoanOriginalAmount 
+ggplot(aes(x = LoanOriginalAmount, y = DebtToIncomeRatio), data = loandata_2009) +
+  geom_point(alpha = 0.2, position = 'jitter') +
+  scale_y_continuous(lim = c(0, 2.5)) +
+  scale_x_continuous(lim = c(0, 35000), breaks = seq(0, 35000, 5000))
+
+# Group the loandata by ProsperRating
+loandata_2009_groups <- group_by(loandata_2009, ProsperRating_alpha)
+
+## Get the mean LenderYield
+loandata_2009_lenderyield <- summarise(loandata_2009_groups, 
+                          mean_LenderYield = mean(LenderYield),
+                          n = n())
+
+## Plot the mean LenderYield by ProsperRating
+ggplot(aes(x = ProsperRating_alpha, y = mean_LenderYield), data = loandata_2009_lenderyield)  +
+  geom_bar(stat = 'identity', color = 'green', fill = 'orange')
+
+```
+
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+- Here I have explored the relationship of ProsperRating with EstimatedLoss and MeanCreditScore. I can see a strong correlation between ProsperRating and EstimatedLoss. However, the same is not true for MeanCreditScore. There is some relationship between credit score and prosper rating, but it is not significant. The major takeaway is we can identify the min and max credit score for each prosper rating. For e.g. minimum mean credit score for AA prosper rating is 689.5. That being said, it is still not enough to predict the prosper rating just on the basis of credit score.
+- As the prosper rating becomes worst, risk increases and therefore the mean lender yield increases accordingly. 
+
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+- Yes, I investiagted if there is a relationship between LoanOriginalAmount and DebtToIncomeRatio. On looking at the chart, you can see that there is some relationship between the two variables. The maximum Debt to Income ratio decreases with the increase in loan amount i.e. people with low Debt to Income ratio request for higher amount of loan. Also, it looks like the most common loan amounts range between $0 to $15,000. 
+
+
+### What was the strongest relationship you found?
+The strongest relationship was found between ProsperRating and EstimatedLoss. It has a correlation of -0.96. As the estimated loss increases, prosper rating becomes worse.
+
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, Multivariate_Plots}
+# Plot ProsperRating, color it by LoanStatus and facet it by IncomeRange
+ggplot(aes(x = ProsperRating_alpha, fill = LoanStatus), data = loandata_2009) +
+  geom_histogram() +
+  facet_wrap(~ IncomeRange)
+
+## Reorder IncomeRange
+loandata_2009$IncomeRange <- factor(loandata_2009$IncomeRange, levels = c("Not employed", "$0", "$1-24,999","$25,000-49,999", "$50,000-74,999", "$75,000-99,999", "$100,000+"), ordered = TRUE)
+
+# Plot ProsperRating, color it by LoanStatus and facet it by EmploymentStatus
+ggplot(aes(x = ProsperRating_alpha, fill = LoanStatus), data = loandata_2009) +
+  geom_histogram() +
+  facet_wrap(~ EmploymentStatus)
+
+# Use IncomeRange to color the distribution of DebtToIncomeRatio vs LoanOriginalAmount
+ggplot(aes(x = LoanOriginalAmount, y = DebtToIncomeRatio, color = IncomeRange), data = subset(loandata_2009, !is.na(DebtToIncomeRatio))) +
+  geom_point(alpha = 0.5) 
+
+## Get the sample of 10000 loans from the data set 
+set.seed(20022012)
+
+loandata_2009_sample <- loandata_2009[sample(1:length(loandata_2009$ProsperRating_alpha), 10000), c("ProsperRating_numeric","LenderYield", "EstimatedEffectiveYield", "EstimatedLoss", "EstimatedReturn", "ProsperScore","DebtToIncomeRatio", "OpenCreditLines", "TotalProsperLoans")]
+
+ggpairs(loandata_2009_sample, params = c(shape = I('.'), outlier.shape = I('.')))
+
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+- Plotted prosper rating by loan status and income range. But, unable to find any definite relationship among these variables.
+- Income range and debt to income ratio strengthened each other and create a trend for the loan amount. Higher income and lower debt to income ratio results in higher loan amount. Explained in more detail in final plots section. 
+
+### Were there any interesting or surprising interactions between features?
+Created a matrix of plots with few variables from the dateset. I could find correlation between ProsperRating_numeric, LenderYield, EstimatedEffectiveYield, EstimatedLoss, EstimatedReturn, ProsperScore. However, all the variables except Lender Yield are estimated/calculated by prosper marketplace, and therefore it is highly likely that they re correlated to each other. To build a predicted model for prosper rating, further investigation is required.  
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+loandata_2009_groups <- group_by(loandata_2009, ProsperRating_alpha)
+
+loandata_2009_by_prosperrating <- summarise(loandata_2009_groups, 
+                          mean_LenderYield = mean(LenderYield),
+                          mean_EstimatedEffectiveYield = mean(EstimatedEffectiveYield),
+                          mean_EstimatedLoss = mean(EstimatedLoss),
+                          mean_EstimatedReturn = mean(EstimatedReturn),
+                          n = n())
+
+p1 = ggplot(aes(x = ProsperRating_alpha, y = mean_EstimatedLoss), data = loandata_2009_by_prosperrating) +
+  geom_bar(stat = 'identity', fill = I('Red')) +
+  xlab("Prosper Rating") +
+  ylab("Mean Estimated Loss")
+  
+
+p2 = ggplot(aes(x = ProsperRating_alpha, y = mean_EstimatedReturn), data = loandata_2009_by_prosperrating) +
+  geom_bar(stat = 'identity', fill = I('Blue')) + 
+  xlab("Prosper Rating") +
+  ylab("Mean Estimated Return")
+
+p3 = ggplot(aes(x = ProsperRating_alpha, y = mean_EstimatedEffectiveYield), data = loandata_2009_by_prosperrating) +
+  geom_bar(stat = 'identity', fill = I('Green')) +
+  xlab("Prosper Rating") +
+  ylab("Mean Estimated Effective Yield")
+
+p4 = ggplot(aes(x = ProsperRating_alpha, y = mean_LenderYield), data = loandata_2009_by_prosperrating) +
+  geom_bar(stat = 'identity', fill = I('orange')) +
+  xlab("Prosper Rating") +
+  ylab("Mean Lender Yield")
+
+grid.arrange(p1, p2, p3, p4, ncol = 1) 
+```
+
+### Description One
+As a lender/investor coming to the prosper marketplace, I would like to know few basic insights to make informed decisions. 
+
+In the above plot, I have grouped the records by prosper rating, and then calculated the mean Estimated Loss, Estimated Return, Estimated Effective Yield, and Lender Yield. I have then plotted all the mean values by prosper rating in multiple charts, and presented in a single column grid. 
+
+This visualization will help the lender to get a quick view of the loss/profit rates for each prosper rating, and this will help the lender to make informed decisions on how to invest his money. The genreral trend is that high estimated loss are marked as high risk. In return, high risk loans have high estimated returns and high yield. However, there is an exception where Prosper rating E has comparatively less loss rate than HR, but high return rate. 
+
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+ggplot(aes(x = LoanOriginalAmount, y = DebtToIncomeRatio, color = IncomeRange), data = subset(loandata_2009, !is.na(DebtToIncomeRatio))) +
+  geom_point(alpha = 0.5, size = 1.5, position = 'jitter') +
+  scale_y_continuous(lim = c(0, quantile(subset(loandata_2009, !is.na(DebtToIncomeRatio))$DebtToIncomeRatio, 0.99))) +
+  scale_color_brewer(type = 'qual',
+                     guide = guide_legend(title = 'Income Range', reverse = T,
+                                          override.aes = list(alpha = 1, size = 2))) +
+  xlab("Loan Original Amount") +
+  ylab("Debt to Income Ratio") +
+  ggtitle('Debt to Income Ratio by Loan Original Amount')
+```
+
+### Description Two
+As a lender/investor, I would like to understand the income demographics of the borrower. 
+
+I have added another variable to the scatterplot for DebtToIncomeRatio vs LoanOriginalAmount. This visualization provides more visibilty to the income pattern of the loan requestors. We can infer that people with high income range compartively have low debt to income ratio. Also, people with high income and low debt to income ratio request higher loan amounts. 
+
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+ggplot(aes(x = ProsperRating_alpha, fill = LoanStatus), data = subset(loandata_2009, LoanStatus != 'Completed' & LoanStatus != 'Current' )) +
+  geom_bar() + 
+  facet_wrap ( ~ EmploymentStatus, scales = "free_y") +
+  scale_fill_discrete(name = "Loan Status") +
+  xlab("Prosper Rating") +
+  ylab("Count") +
+  ggtitle('Number of incompleted loans by Prosper Rating, Employment Status and Loan Status')
+
+```
+
+### Description Three
+As a lender/investor, I would like to view the historical data for the loans that are not completed/current by employment status.
+
+I took a subset of the data set to exclude the loans that are completed or still in porgress (i.e. Current). With the help of this visualization, I am trying to surface the pending loan status by prosper rating. I have faceted the plot by employment status to view individual breakdown. 
+
+------
+
+# Reflection
+
+### Where did I run into difficulties in the analysis? Where did I find my successes?
+It took me a while to understand the data. At the beginning, I wans't sure what am I looking at, what are the key features, and what does each variable means. To better understand the data, I reasearched on internet and read the wiki for prosper loans. I also found the variable definition document for prosper loan dataset, shared by Chris on google drive. The context helped me understand the theoretical relationship between the variables and set the questions for my analysis work. 
+
+I was trying to find some relationship or pattern between prosper rating and categorical variables like income range, employment status. But, I did not find any useful relationship that I could use to predict the prosper rating for new loan listings. However, I did find a strong relationship between prosper rating and estimated loss rate. Then again, I think estimated loss is predicted by prosper marketplace as well, and it needs further investigation to build a predicted model based on the information provided by the borrower.  
+
+### How could the analysis be enriched in future work (e.g. additional data and analyses)?
+
+As mentioned above, further exploration is required to develop a model to predict the prosper rating based on the information provided by the borrower at the time of loan listing. Also, I do not completely understand all the 81 variables in the dataset, therefore a little more effort is required to study and investigate other variables. 

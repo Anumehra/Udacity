@@ -1,0 +1,5 @@
+http://www.stat.berkeley.edu/~s133/factors.html
+http://www.r-bloggers.com/reorder-factor-levels-2/
+https://www.rstudio.com/wp-content/uploads/2015/08/ggplot2-cheatsheet.pdf
+https://docs.google.com/spreadsheets/d/1gDyi_L4UvIrLTEC6Wri5nbaMmkGmLQBk-Yx3z0XDEtI/edit#gid=0
+http://stackoverflow.com/questions/13297995/changing-font-size-and-direction-of-axes-text-in-ggplot2
